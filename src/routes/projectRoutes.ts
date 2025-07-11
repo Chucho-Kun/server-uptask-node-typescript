@@ -21,15 +21,13 @@ router.post('/' ,
 router.get('/' , ProjectController.getAllProjects )
 
 router.get('/:id' , 
-    param('id')
-        .isMongoId().withMessage('Id no válido'),
+    param('id').isMongoId().withMessage('Id no válido'),
     handleInputErrors,        
     ProjectController.getProjectById 
 )
 
 router.put('/:id' , 
-    param('id')
-        .isMongoId().withMessage('Id no válido'),
+    param('id').isMongoId().withMessage('Id no válido'),
     body('projectName')
         .notEmpty().withMessage('El nombre es obligatorio'),
     body('clientName')
@@ -41,17 +39,48 @@ router.put('/:id' ,
 )
 
 router.delete('/:id' , 
-    param('id')
-        .isMongoId().withMessage('Id no válido'),
+    param('id').isMongoId().withMessage('Id no válido'),
     handleInputErrors,        
     ProjectController.deleteProject 
 )
 
 /** Routes for task **/
+router.param( 'projectId' , validateProjectExist )
+
 router.post('/:projectId/task',
-    validateProjectExist,
+    body('name')
+        .notEmpty().withMessage('El nombre de la tarea es obligatoria'),
+    body('description')
+        .notEmpty().withMessage('La descripción de la tarea es obligatoria'),
+    handleInputErrors,
     TaskController.createTask
 )
 
+router.get('/:projectId/task',
+    handleInputErrors,
+   TaskController.getProjectTasks
+)
+
+router.get('/:projectId/tasks/:taskId',
+    param('taskId').isMongoId().withMessage('Id no válido'),
+    handleInputErrors,
+    TaskController.getTaskById
+)
+
+router.put('/:projectId/tasks/:taskId',
+    param('taskId').isMongoId().withMessage('Id no válido'),
+    body('name')
+        .notEmpty().withMessage('El nombre de la tarea es obligatoria'),
+    body('description')
+        .notEmpty().withMessage('La descripción de la tarea es obligatoria'),
+    handleInputErrors,
+    TaskController.updateTask
+)
+
+router.delete('/:projectId/tasks/:taskId',
+    param('taskId').isMongoId().withMessage('Id no válido'),
+    handleInputErrors,
+    TaskController.deleteTask
+)
 
 export default router
