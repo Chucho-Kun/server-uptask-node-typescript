@@ -1,7 +1,7 @@
 import mongoose, { Document, PopulatedDoc, ProjectionType, Schema, Types } from "mongoose";
 import { ITask } from "./Task";
 
-export type ProyectType = Document & {
+export interface IProject extends Document {
     projectName: string
     clientName: string
     description: string
@@ -30,5 +30,5 @@ const ProjectSchema : Schema = new Schema({
     }]
 }, { timestamps : true })
 
-const Project = mongoose.model<ProyectType>( 'Project' , ProjectSchema )
+const Project = mongoose.model<IProject>( 'Project' , ProjectSchema )
 export default Project
