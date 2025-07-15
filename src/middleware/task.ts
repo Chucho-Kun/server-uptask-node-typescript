@@ -20,7 +20,7 @@ export async function taskExist( req : Request , res : Response , next : NextFun
         req.task = task
         next()
     } catch (error) {
-        res.status(500).json({error:'Hubo un erro'})
+        res.status(500).json({error:'Hubo un error consultando la tarea'})
     }
 }
 
