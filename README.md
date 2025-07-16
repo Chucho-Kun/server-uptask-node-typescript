@@ -201,3 +201,8 @@ server.listen( port , () => {
     
 })
 ```
+#### .env
+```
+DATABASE_URL=mongodb+srv://root:xxxxx@xxxxx.xxxxx.mongodb.net/uptask_mern
+FRONTEND_URL=https://client-uptask-node-typescript.vercel.app
+```
