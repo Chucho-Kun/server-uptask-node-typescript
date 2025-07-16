@@ -10,7 +10,7 @@ API documented by Swagger
 import mongoose, { Document, PopulatedDoc, ProjectionType, Schema, Types } from "mongoose";
 import { ITask } from "./Task";
 
-export type ProyectType = Document & {
+export interface IProject extends Document {
     projectName: string
     clientName: string
     description: string
@@ -39,17 +39,28 @@ const ProjectSchema : Schema = new Schema({
     }]
 }, { timestamps : true })
 
-const Project = mongoose.model<ProyectType>( 'Project' , ProjectSchema )
+const Project = mongoose.model<IProject>( 'Project' , ProjectSchema )
 export default Project
 ```
 #### src/models/Task.ts
 ```
 import mongoose, { Schema , Document, Types } from "mongoose";
 
+const taskStatus = {
+    PENDING: 'pending',
+    ON_HOLD: 'onHold',
+    IN_PROGRESS: 'inProgress',
+    UNDER_REVIEW: 'underReview',
+    COMPLETED: 'completed'
+} as const
+
+export type TaskStatus = typeof taskStatus[ keyof typeof taskStatus ]
+
 export interface ITask extends Document {
     name: string
     description: string
     project: Types.ObjectId
+    status: TaskStatus
 }
 
 export const TaskSchema : Schema = new Schema({
@@ -66,6 +77,11 @@ export const TaskSchema : Schema = new Schema({
     project: {
         type: Types.ObjectId,
         ref: 'Project'
+    },
+    status: {
+        type: String,
+        enum: Object.values( taskStatus ),
+        default: taskStatus.PENDING
     }
 } , { timestamps : true })
 
@@ -172,4 +188,16 @@ router.post('/:projectId/tasks/:taskId/status',
 )
 
 export default router
+```
+#### src/routes/projectRoutes.ts
+```
+import colors from "colors"
+import server from "./server"
+
+const port = process.env.PORT || 4000
+
+server.listen( port , () => {
+    console.log( colors.bgBlue.bold( `escuchando en el puerto ${ port }` ));
+    
+})
 ```
