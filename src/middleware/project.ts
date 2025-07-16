@@ -20,6 +20,6 @@ export async function projectExist( req : Request , res : Response , next : Next
         req.project = project
         next()
     } catch (error) {
-        res.status(500).json({error:'Hubo un erro'})
+        res.status(500).json({error:'Hubo un error en la petición'})
     }
 }
