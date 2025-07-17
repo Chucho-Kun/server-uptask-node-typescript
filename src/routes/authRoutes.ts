@@ -30,4 +30,11 @@ router.post('/confirm-account' ,
         AuthController.confirmAccount
 )
 
+router.post('/login' , 
+    body('token')
+        .notEmpty().withMessage('El Token no puede ir vacio'),
+        handleInputErrors,
+        AuthController.confirmAccount
+)
+
 export default router
