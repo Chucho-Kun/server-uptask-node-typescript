@@ -31,10 +31,12 @@ router.post('/confirm-account' ,
 )
 
 router.post('/login' , 
-    body('token')
-        .notEmpty().withMessage('El Token no puede ir vacio'),
+    body('email')
+        .notEmpty().withMessage('Correo no válido'),
+    body('password')
+        .notEmpty().withMessage('El password es obligatorio'),  
         handleInputErrors,
-        AuthController.confirmAccount
+        AuthController.login
 )
 
 export default router
