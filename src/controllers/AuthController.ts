@@ -4,6 +4,7 @@ import { hashPassword } from "../utils/auth"
 import Token from "../models/Token"
 import { generateToken } from "../utils/token"
 import { transporter } from "../config/nodemailer"
+import { AuthEmail } from "../emails/AuthEmail"
 
 export class AuthController {
 
@@ -30,18 +31,10 @@ export class AuthController {
             token.user = user.id
 
             // enviar el email
-            await transporter.sendMail({
-                from: 'UpTask <admin@uptask.com>',
-                to: user.email,
-                subject: 'UpTask - Confirmar Cuenta',
-                text: 'Puedes confirmar tu cuenta de UpTask en este email',
-                html: `<p style="text-align: center;
-                        font-weight: bold;
-                        background-color: darkblue;
-                        color: white;
-                        padding: 15px 0px;
-                        border-radius: 8px;
-                        font-family: sans-serif;">${ user.name } Confirma tu registro</p>`
+            AuthEmail.sendConfirmationEmail({
+                email: user.email,
+                name: user.name,
+                token: token.token
             })
             
             await Promise.allSettled([ user.save() , token.save() ])
@@ -49,6 +42,19 @@ export class AuthController {
             res.send('Cuenta creada, revisa tu email como confirmarla')
         } catch (error) {
             res.status(500).json({error: 'Hubo un error'})
+        }
+    }
+
+    static confirmAccount = async ( req: Request , res: Response ) => {
+        try {
+            const { token } = req.body
+            const tokenExist = await Token.findOne({token})
+            if(!tokenExist){
+                const error = new Error('Token expirado')
+                return res.status(404).json({error: error.message})
+            }
+        } catch (error) {
+            res.status(500).json({error:'Hubo un error'})
         }
     }
 
