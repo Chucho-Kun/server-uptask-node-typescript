@@ -23,7 +23,7 @@ export class AuthEmail {
                                 font-family: sans-serif;">${ user.name } Confirma tu registro
                                 <div>
                                 <p>Solo se requiere confirmar la cuenta en la siguiente liga</p>
-                                <a href="">Confirmar cuenta</a>
+                                <a href="${process.env.FRONTEND_URL}/auth/confirm-account">Confirmar cuenta</a>
                                 <p>Ingresa el código: <b>${ user.token }</b></p>
                                 <p>El token tiene una caducidad de 10 minutos desde que se envía al correo</b></p>
                                 </div>
