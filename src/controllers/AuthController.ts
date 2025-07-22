@@ -103,13 +103,12 @@ export class AuthController {
                 const error = new Error('Password incorrecto!')
                 return res.status(401).json({error: error.message})
             }
-            const token = generateJWT(user.id)
-            console.log(token);
             
-            res.send('auteticado...')
+            const token = generateJWT({id: user.id})
+            res.send(token)
 
-        } catch (error) {
-            res.status(500).json({error:'Hubo un error'})
+        } catch (error) {     
+            res.status(500).json({error:'Hubo un error en el servidor'})
         }
     }
 
