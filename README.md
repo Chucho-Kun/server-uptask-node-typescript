@@ -322,3 +322,20 @@ server.listen( port , () => {
 DATABASE_URL=mongodb+srv://root:xxxxx@xxxxx.xxxxx.mongodb.net/uptask_mern
 FRONTEND_URL=https://client-uptask-node-typescript.vercel.app
 ```
+#### JSON Web Token
+```
+import jwt from "jsonwebtoken"
+import { Types } from "mongoose"
+
+type UserPayload = {
+    id: Types.ObjectId
+}
+
+export const generateJWT = ( payload: UserPayload ) => {
+
+    const token = jwt.sign( payload , process.env.JWT_SECRET ,  {
+        expiresIn: '1d' // 30s, 5m, 1y
+    } )
+    return token
+}
+```
