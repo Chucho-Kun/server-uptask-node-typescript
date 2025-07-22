@@ -5,6 +5,7 @@ import Token from "../models/Token"
 import { generateToken } from "../utils/token"
 import { transporter } from "../config/nodemailer"
 import { AuthEmail } from "../emails/AuthEmail"
+import { generateJWT } from "../utils/jwt"
 
 export class AuthController {
 
@@ -102,6 +103,9 @@ export class AuthController {
                 const error = new Error('Password incorrecto!')
                 return res.status(401).json({error: error.message})
             }
+            const token = generateJWT(user.id)
+            console.log(token);
+            
             res.send('auteticado...')
 
         } catch (error) {
