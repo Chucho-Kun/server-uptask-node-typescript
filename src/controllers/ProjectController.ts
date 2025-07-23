@@ -18,14 +18,20 @@ export class ProjectController {
         } 
     }
     
-    static getAllProjects = async ( req : Request , res : Response ) => {
+    static getAllProjects = async ( req : Request , res : Response ) => {       
         
         try {
-            const projects = await Project.find({}).populate('tasks')
+            console.log('vamos a comprobar');
+            
+            const projects = await Project.find({
+                $or:[{
+                    manager: {$in: req.user.id}
+                }]
+            }).populate('tasks')
             res.json(projects)
         } catch (error) {
             console.log(error);
-            
+            res.status(500).json({error:'Error al obtener los proyectos'})
         }   
     }
 
@@ -37,6 +43,8 @@ export class ProjectController {
                 const error = new Error('Proyecto no encontrado')
                 return res.status(404).json({ error: error.message })
             }
+
+            if(project.manager.toString() !== req.user.id.toString()){ return res.status(404).json({error:'Acción no válida'})}
             
             res.json(project)
         } catch (error) {
@@ -53,6 +61,9 @@ export class ProjectController {
                 const error = new Error('Proyecto no encontrado')
                 return res.status(404).json({ error: error.message })
             }
+
+            if(project.manager.toString() !== req.user.id.toString()){ return res.status(404).json({error:'Solo el manager puede actualizar el proyecto'})}
+
             project.clientName = req.body.clientName
             project.projectName = req.body.projectName
             project.description = req.body.description
@@ -79,7 +90,9 @@ export class ProjectController {
             if(!project){
                 const error = new Error('Proyecto no encontrado')
                 return res.status(404).json({ error: error.message })
-            } 
+            }
+
+            if(project.manager.toString() !== req.user.id.toString()){ return res.status(404).json({error:'Solo el manager puede eliminar el proyecto'})}
 
             await project.deleteOne()
             res.send('Proyecto eliminado')

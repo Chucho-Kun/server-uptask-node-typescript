@@ -12,7 +12,6 @@ declare global {
 
 export const authenticate = async ( req:Request , res:Response , next:NextFunction) => {
     const bearer = req.headers.authorization
-    console.log({bearer});
     
     if(!bearer){
         const error = new Error('No Autorizado')
