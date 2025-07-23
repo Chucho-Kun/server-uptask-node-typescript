@@ -1,5 +1,5 @@
-# SERVER - REST API NODE - Typescrip ( MERN )
-A server in Node that connects to an API in MongoDB - Node / Typescript Server - Express ( MERN )
+# SERVER - REST API NODE - Typescrip ( MERN ) + JSON Web Token
+A server in Node that connects to an API in MongoDB - Node / Typescript Server - Express ( MERN ) / Managed authentication with JWT
 ## Technologies
 Node + TypeScript + Mongoose + Express
 Testing tests with Jest + Super Test
@@ -322,7 +322,8 @@ server.listen( port , () => {
 DATABASE_URL=mongodb+srv://root:xxxxx@xxxxx.xxxxx.mongodb.net/uptask_mern
 FRONTEND_URL=https://client-uptask-node-typescript.vercel.app
 ```
-#### JSON Web Token
+### JSON Web Token
+#### src/utils/jwt.ts
 ```
 import jwt from "jsonwebtoken"
 import { Types } from "mongoose"
@@ -331,11 +332,55 @@ type UserPayload = {
     id: Types.ObjectId
 }
 
-export const generateJWT = ( payload: UserPayload ) => {
-
-    const token = jwt.sign( payload , process.env.JWT_SECRET ,  {
-        expiresIn: '1d' // 30s, 5m, 1y
+export const generateJWT = ( payload : UserPayload ) => {
+ // expiresIn: 1d, 30s, 5m, 1y, 1h
+    const token = jwt.sign( payload , process.env.JWT_SECRET , {
+        expiresIn: '1d'
     } )
     return token
+}
+```
+#### src/middleware/auth.ts
+```
+import { Request , Response , NextFunction, request } from "express"
+import jwt from 'jsonwebtoken'
+import User, { IUser } from "../models/User"
+
+declare global {
+    namespace Express {
+        interface Request {
+            user?: IUser
+        }
+    }
+}
+
+export const authenticate = async ( req:Request , res:Response , next:NextFunction) => {
+    const bearer = req.headers.authorization
+    
+    if(!bearer){
+        const error = new Error('No Autorizado')
+        return res.status(401).json({error:error.message})
+    }
+    const token = bearer.split(' ')[1]
+
+    try {
+        const decoded = jwt.verify( token , process.env.JWT_SECRET )
+        console.log({decoded});
+        
+        if(typeof decoded === 'object' && decoded.id){
+            const user = await User.findById(decoded.id).select('_id name email')
+            console.log(user);
+            
+            if(user){
+                req.user = user
+                next()
+            }else{
+                res.status(500).json({error:'Usuario no registrado'})
+            }
+        }
+    } catch (error) {
+        res.status(500).json({error:'Token no válido'})
+    }
+
 }
 ```
