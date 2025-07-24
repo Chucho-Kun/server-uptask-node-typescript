@@ -31,6 +31,7 @@ export const authenticate = async ( req:Request , res:Response , next:NextFuncti
             
             if(user){
                 req.user = user
+                next()
             }else{
                 res.status(500).json({error:'Usuario no registrado'})
             }
@@ -39,5 +40,4 @@ export const authenticate = async ( req:Request , res:Response , next:NextFuncti
         res.status(500).json({error:'Token no válido'})
     }
 
-    next()
 }

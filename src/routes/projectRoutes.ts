@@ -1,11 +1,12 @@
 import { Router } from "express";
 import { ProjectController } from "../controllers/ProjectController";
 import { body, param } from "express-validator";
-import { handleInputErrors } from "../middleware/validation";
+import { handleInputErrors } from '../middleware/validation';
 import { TaskController } from "../controllers/TaskController";
 import { projectExist } from "../middleware/project";
 import { taskBelongsToProject, taskExist } from "../middleware/task";
 import { authenticate } from "../middleware/auth";
+import { TeamMemberController } from "../controllers/TeamController";
 
 const router = Router()
 
@@ -96,6 +97,31 @@ router.post('/:projectId/tasks/:taskId/status',
         .notEmpty().withMessage('El estado es obligatorio'),
     handleInputErrors,
     TaskController.updateStatus
+)
+/** Routes for teams */
+router.post('/:projectId/team/find' , 
+    body('email')
+        .isEmail().toLowerCase().withMessage('E-mail no válido'),
+    handleInputErrors,
+    TeamMemberController.findMemberByEmail
+)
+
+router.get('/:projectId/team',
+    TeamMemberController.getProjectTeam
+)
+
+router.post('/:projectId/team' , 
+    body('id')
+        .isMongoId().withMessage('Id no válido'),
+    handleInputErrors,
+    TeamMemberController.addMemberById
+)
+
+router.delete('/:projectId/team' ,
+    body('id')
+        .isMongoId().withMessage('Id no válido'),
+    handleInputErrors,
+    TeamMemberController.removeMemberById
 )
 
 export default router
