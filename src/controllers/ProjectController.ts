@@ -21,12 +21,12 @@ export class ProjectController {
     static getAllProjects = async ( req : Request , res : Response ) => {       
         
         try {
-            console.log('vamos a comprobar');
             
             const projects = await Project.find({
-                $or:[{
-                    manager: {$in: req.user.id}
-                }]
+                $or:[
+                    {manager: {$in: req.user.id}},
+                    {team:{$in: req.user.id}}
+                ]
             }).populate('tasks')
             res.json(projects)
         } catch (error) {
@@ -45,7 +45,9 @@ export class ProjectController {
                 return res.status(404).json({ error: error.message })
             }
 
-            if(project.manager.toString() !== req.user.id.toString()){ return res.status(404).json({error:'Acción no válida'})}
+            if(project.manager.toString() !== req.user.id.toString() && !project.team.includes(req.user.id)){ 
+                return res.status(404).json({error:'Acción no válida'})
+            }
             
             res.json(project)
         } catch (error) {
