@@ -18,16 +18,13 @@ export const authenticate = async ( req:Request , res:Response , next:NextFuncti
         return res.status(401).json({error:error.message})
     }
     const token = bearer.split(' ')[1]
-    console.log({token});
     
 
     try {
         const decoded = jwt.verify( token , process.env.JWT_SECRET )
-        console.log({decoded});
         
         if(typeof decoded === 'object' && decoded.id){
             const user = await User.findById(decoded.id).select('_id name email')
-            console.log(user);
             
             if(user){
                 req.user = user

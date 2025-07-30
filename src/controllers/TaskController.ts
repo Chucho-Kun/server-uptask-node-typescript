@@ -65,7 +65,7 @@ export class TaskController {
                 user: id,
                 status
             }
-            //req.task.status = status
+            req.task.status = status
             //const lastStatus = (status === 'pending') ? null : id
             req.task.completedBy.push(data)
             await req.task.save()

@@ -109,7 +109,7 @@ router.post('/check-password',
     body('password')
         .notEmpty().withMessage('El password es obligatorio'),
     handleInputErrors,
-    
+    AuthController.checkPassword
 )
 
 export default router

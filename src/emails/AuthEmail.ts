@@ -29,7 +29,7 @@ export class AuthEmail {
                                                                 </div></div>
                                 `
                     })
-                    console.log('Mensaje enviado' , info.messageId);
+                    
                     
     }
 
@@ -53,7 +53,7 @@ export class AuthEmail {
                                                                 </div></div>`
                                 
                     })
-                    console.log('Password Token Reset Enviado' , info.messageId);
+                    
                     
     }
 

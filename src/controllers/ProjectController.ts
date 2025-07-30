@@ -14,7 +14,7 @@ export class ProjectController {
             await project.save()
             res.send('proyecto creado correctamente...')
         } catch (error) {
-            console.log(error);
+            res.status(500).json({error:'Hubo un error al crear el proyecto'})
         } 
     }
     
@@ -30,7 +30,6 @@ export class ProjectController {
             }).populate('tasks')
             res.json(projects)
         } catch (error) {
-            console.log(error);
             res.status(500).json({error:'Error al obtener los proyectos'})
         }   
     }
@@ -51,57 +50,35 @@ export class ProjectController {
             
             res.json(project)
         } catch (error) {
-            console.log(error);
-            
+            res.status(500).json({error:'Hubo un error al obtener proyectos por id'})
         }   
     }
 
     static updateProject = async ( req : Request , res : Response ) => {
-        const { id } = req.params
         try {
-            const project = await Project.findById( id )
-            if( !project ){
-                const error = new Error('Proyecto no encontrado')
-                return res.status(404).json({ error: error.message })
-            }
-
-            if(project.manager.toString() !== req.user.id.toString()){ return res.status(404).json({error:'Solo el manager puede actualizar el proyecto'})}
-
-            project.clientName = req.body.clientName
-            project.projectName = req.body.projectName
-            project.description = req.body.description
+            req.project.clientName = req.body.clientName
+            req.project.projectName = req.body.projectName
+            req.project.description = req.body.description
             
-            await project.save()
+            await req.project.save()
             res.send('Proyecto actualizado')
-            if(!project){
+            if(!req.project){
                 const error = new Error('Proyecto no encontrado')
                 return res.status(404).json({ error: error.message })
             }
             
-            res.json(project)
+            res.json(req.project)
         } catch (error) {
-            console.log(error);
-            
+            res.status(500).json({error:'Hubo un error al actualizar el proyecto'})
         }   
     }
 
     static deleteProject = async ( req : Request , res : Response ) => {
-        const { id } = req.params
-        try {
-            const project = await Project.findById( id )
-
-            if(!project){
-                const error = new Error('Proyecto no encontrado')
-                return res.status(404).json({ error: error.message })
-            }
-
-            if(project.manager.toString() !== req.user.id.toString()){ return res.status(404).json({error:'Solo el manager puede eliminar el proyecto'})}
-
-            await project.deleteOne()
+        try{
+            await req.project.deleteOne()
             res.send('Proyecto eliminado')
         } catch (error) {
-            console.log(error);
-            
+            res.status(500).json({error:'Hubo un error al borrar el proyecto'})
         }   
     }
 
