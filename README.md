@@ -20,6 +20,7 @@ import Token from "../models/Token"
 import { generateToken } from "../utils/token"
 import { transporter } from "../config/nodemailer"
 import { AuthEmail } from "../emails/AuthEmail"
+import { generateJWT } from "../utils/jwt"
 
 export class AuthController {
 
@@ -117,144 +118,184 @@ export class AuthController {
                 const error = new Error('Password incorrecto!')
                 return res.status(401).json({error: error.message})
             }
-            res.send('auteticado...')
+            
+            const token = generateJWT({id: user.id})
+            res.send(token)
 
+        } catch (error) {     
+            res.status(500).json({error:'Hubo un error en el servidor'})
+        }
+    }
+
+    static requestConfirmationCode = async ( req : Request , res : Response ) => {
+        try {
+            const { email } = req.body
+
+            // Comprobar correo registrado para enviar el correo de confirmación
+            const user = await User.findOne({email})
+            if( !user ){
+                const error = new Error('Usuario no registrado')
+                res.status(404).json({error: error.message})
+            }
+
+            if( user.confirmed ){
+                const error = new Error('El usuario ya está confirmado')
+                return res.status(403).json({ error: error.message})
+            }
+            
+            // Generar token
+            const token = new Token()
+            token.token = generateToken()
+            token.user = user.id
+
+            // enviar el email
+            AuthEmail.sendConfirmationEmail({
+                email: user.email,
+                name: user.name,
+                token: token.token
+            })
+            
+            await Promise.allSettled([ user.save() , token.save() ])
+
+            res.send(`Se envió un nuevo token a tu correo: ${ email }`)
+        } catch (error) {
+            res.status(500).json({error: 'Error mientras se enviaba un nuevo token al correo registrado'})
+        }
+    }
+
+    static forgottenPassword = async ( req : Request , res : Response ) => {
+        try {
+            const { email } = req.body
+
+            // Comprobar correo registrado para enviar el correo de confirmación
+            const user = await User.findOne({email})
+            if( !user ){
+                const error = new Error('Usuario no registrado')
+                res.status(404).json({error: error.message})
+            }
+            
+            // Generar token
+            const token = new Token()
+            token.token = generateToken()
+            token.user = user.id
+            await token.save()
+
+            // enviar el email
+            AuthEmail.sendPasswordResetToken({
+                email: user.email,
+                name: user.name,
+                token: token.token
+            })
+
+            res.send(`Se envió la liga de restauración al email: ${ email }`)
+        } catch (error) {
+            res.status(500).json({error: 'Error mientras se enviaba un nuevo token al correo registrado'})
+        }
+    }
+
+    static validateToken = async ( req: Request , res: Response ) => {
+        try {
+            const { token } = req.body
+            const tokenExist = await Token.findOne({token})
+            if(!tokenExist){
+                const error = new Error('Token expirado')
+                return res.status(404).json({error: error.message})
+            }
+            res.send('Token válido, Asigna un nuevo password')
         } catch (error) {
             res.status(500).json({error:'Hubo un error'})
         }
     }
 
-}
-```
-#### src/models/Project.ts
-```
-import mongoose, { Document, PopulatedDoc, ProjectionType, Schema, Types } from "mongoose";
-import { ITask } from "./Task";
+    static uptadePasswordWithToken = async ( req: Request , res: Response ) => {
+        try {
+            const { token } = req.params
+            const { password } = req.body
 
-export interface IProject extends Document {
-    projectName: string
-    clientName: string
-    description: string
-    tasks: PopulatedDoc<ITask & Document>[]
-}
+            const tokenExist = await Token.findOne({token})
+            if(!tokenExist){
+                const error = new Error('Token no válido')
+                return res.status(404).json({error: error.message})
+            }
 
-const ProjectSchema : Schema = new Schema({
-    projectName: {
-        type: String,
-        require: true,
-        trim: true
-    },
-    clientName: {
-        type: String,
-        require: true,
-        trim: true
-    },
-    description: {
-        type: String,
-        require: true,
-        trim: true
-    },
-    tasks: [{
-        type: Types.ObjectId,
-        ref: 'Task'
-    }]
-}, { timestamps : true })
+            const user = await User.findById(tokenExist.user)
+            user.password = await hashPassword(password)
 
-const Project = mongoose.model<IProject>( 'Project' , ProjectSchema )
-export default Project
-```
-#### src/models/Task.ts
-```
-import mongoose, { Schema , Document, Types } from "mongoose";
+            await Promise.allSettled([user.save() , tokenExist.deleteOne()])
 
-const taskStatus = {
-    PENDING: 'pending',
-    ON_HOLD: 'onHold',
-    IN_PROGRESS: 'inProgress',
-    UNDER_REVIEW: 'underReview',
-    COMPLETED: 'completed'
-} as const
-
-export type TaskStatus = typeof taskStatus[ keyof typeof taskStatus ]
-
-export interface ITask extends Document {
-    name: string
-    description: string
-    project: Types.ObjectId
-    status: TaskStatus
-}
-
-export const TaskSchema : Schema = new Schema({
-    name: {
-        type: String,
-        trim: true,
-        require: true
-    },
-    description:{
-        type: String,
-        trim: true,
-        require: true
-    },
-    project: {
-        type: Types.ObjectId,
-        ref: 'Project'
-    },
-    status: {
-        type: String,
-        enum: Object.values( taskStatus ),
-        default: taskStatus.PENDING
+            res.send('Password modificado correctamente')
+        } catch (error) {
+            res.status(500).json({error:'Hubo un error'})
+        }
     }
-} , { timestamps : true })
 
-const Task = mongoose.model<ITask>('Task' , TaskSchema)
-export default Task
-```
-#### src/models/User.ts
-```
-import mongoose, { Schema , Document } from "mongoose"
-
-export interface IUser extends Document {
-    email: string
-    password: string
-    name: string
-    confirmed: boolean
-}
-
-const userSchema : Schema = new Schema({
-    email:{
-        type: String,
-        required: true,
-        lowercase: true,
-        unique: true
-    },
-    password:{
-        type: String,
-        required: true
-    },
-    name: {
-        type: String,
-        required: true
-    },
-    confirmed:{
-        type: Boolean,
-        default: false
+    static user = async (req: Request , res: Response) => {
+        return res.json(req.user)
     }
-})
 
-const User = mongoose.model<IUser>('User' , userSchema)
-export default User
+    static updateProfile = async (req: Request , res: Response) => {
+        const { name , email } = req.body
+
+        const userExist = await User.findOne({email})
+        if(userExist && userExist.id.toString() !== req.user.id.toString()){
+            return res.status(409).json({error:'Ese email ya está registrado'})
+        }
+
+        req.user.name = name
+        req.user.email = email
+        try {
+            await req.user.save()
+            res.send('Perfil actualizado correctamente')
+        } catch (error) {
+            res.status(500).send('Hubo un error')
+        }
+    }
+
+    static updateCurrentUserPassword = async (req: Request , res: Response) => {
+        const { current_password , password } = req.body
+        const user = await User.findById(req.user.id)
+        const isPasswordCorrect = await checkPassword(current_password, user.password)
+        if(!isPasswordCorrect){
+            return res.status(401).json({error:'El password actual es incorrecto'})
+        }
+
+        try {
+            user.password = await hashPassword(password)
+            await user.save()
+            res.send('El password se modificó correctamente')
+        } catch (error) {
+            res.status(500).send('Hubo un error')
+        }
+    }
+    
+    static checkPassword = async (req: Request , res: Response) => {
+        const { password } = req.body
+        const user = await User.findById(req.user.id)
+        const isPasswordCorrect = await checkPassword(password, user.password)
+        
+        if(!isPasswordCorrect){
+            return res.status(401).json({error:'El password es incorrecto'})
+        }
+        res.send('Password correcto')
+    }
+}
 ```
 #### src/routes/projectRoutes.ts
 ```
 import { Router } from "express";
 import { ProjectController } from "../controllers/ProjectController";
 import { body, param } from "express-validator";
-import { handleInputErrors } from "../middleware/validation";
+import { handleInputErrors } from '../middleware/validation';
 import { TaskController } from "../controllers/TaskController";
 import { projectExist } from "../middleware/project";
-import { taskBelongsToProject, taskExist } from "../middleware/task";
+import { hasAuthorization, taskBelongsToProject, taskExist } from "../middleware/task";
+import { authenticate } from "../middleware/auth";
+import { TeamMemberController } from "../controllers/TeamController";
+import { NoteController } from "../controllers/NoteController";
 
 const router = Router()
+
+router.use(authenticate)
 
 router.post('/' , 
     body('projectName')
@@ -275,26 +316,28 @@ router.get('/:id' ,
     ProjectController.getProjectById 
 )
 
-router.put('/:id' , 
-    param('id').isMongoId().withMessage('Id no válido'),
+/** Routes for task **/
+router.param( 'projectId' , projectExist )
+
+router.put('/:projectId' , 
+    param('projectId').isMongoId().withMessage('Id no válido'),
     body('projectName')
         .notEmpty().withMessage('El nombre es obligatorio'),
     body('clientName')
         .notEmpty().withMessage('El cliente es obligatorio'),
     body('description')
         .notEmpty().withMessage('La descripción es obligatoria'),
-    handleInputErrors,    
+    handleInputErrors,
+    hasAuthorization,
     ProjectController.updateProject 
 )
 
-router.delete('/:id' , 
-    param('id').isMongoId().withMessage('Id no válido'),
-    handleInputErrors,        
+router.delete('/:projectId' , 
+    param('projectId').isMongoId().withMessage('Id no válido'),
+    handleInputErrors,
+    hasAuthorization,
     ProjectController.deleteProject 
 )
-
-/** Routes for task **/
-router.param( 'projectId' , projectExist )
 
 router.post('/:projectId/task',
     body('name')
@@ -320,6 +363,7 @@ router.get('/:projectId/tasks/:taskId',
 )
 
 router.put('/:projectId/tasks/:taskId',
+    hasAuthorization,
     param('taskId').isMongoId().withMessage('Id no válido'),
     body('name')
         .notEmpty().withMessage('El nombre de la tarea es obligatoria'),
@@ -330,6 +374,7 @@ router.put('/:projectId/tasks/:taskId',
 )
 
 router.delete('/:projectId/tasks/:taskId',
+    hasAuthorization,
     param('taskId').isMongoId().withMessage('Id no válido'),
     handleInputErrors,
     TaskController.deleteTask
@@ -342,25 +387,50 @@ router.post('/:projectId/tasks/:taskId/status',
     handleInputErrors,
     TaskController.updateStatus
 )
+/** Routes for teams */
+router.post('/:projectId/team/find' , 
+    body('email')
+        .isEmail().toLowerCase().withMessage('E-mail no válido'),
+    handleInputErrors,
+    TeamMemberController.findMemberByEmail
+)
 
+router.get('/:projectId/team',
+    TeamMemberController.getProjectTeam
+)
+
+router.post('/:projectId/team' , 
+    body('id')
+        .isMongoId().withMessage('Id no válido'),
+    handleInputErrors,
+    TeamMemberController.addMemberById
+)
+
+router.delete('/:projectId/team/:userId' ,
+    param('userId')
+        .isMongoId().withMessage('Id no válido'),
+    handleInputErrors,
+    TeamMemberController.removeMemberById
+)
+
+/** Routes for Notes */
+router.post('/:projectId/tasks/:taskId/notes',
+    body('content')
+        .notEmpty().withMessage('El contenido es obligatorio'),
+    handleInputErrors,
+    NoteController.createNote
+)
+
+router.get('/:projectId/tasks/:taskId/notes',
+    NoteController.getTaskNotes
+)
+
+router.delete('/:projectId/tasks/:taskId/notes/:noteId',
+    param('noteId').isMongoId().withMessage('Id no válido'),
+    handleInputErrors,
+    NoteController.deleteNote
+)
 export default router
-```
-#### src/routes/projectRoutes.ts
-```
-import colors from "colors"
-import server from "./server"
-
-const port = process.env.PORT || 4000
-
-server.listen( port , () => {
-    console.log( colors.bgBlue.bold( `escuchando en el puerto ${ port }` ));
-    
-})
-```
-#### .env
-```
-DATABASE_URL=mongodb+srv://root:xxxxx@xxxxx.xxxxx.mongodb.net/uptask_mern
-FRONTEND_URL=https://client-uptask-node-typescript.vercel.app
 ```
 ### JSON Web Token
 #### src/utils/jwt.ts
@@ -424,34 +494,15 @@ export const authenticate = async ( req:Request , res:Response , next:NextFuncti
 
 }
 ```
-#### src/models/Note.ts
+#### src/env
 ```
-import mongoose, { Document, Schema, Types } from "mongoose";
+DATABASE_URL=mongodb+srv://root:xxx@xxx.xxx.mongodb.net/xxx
+FRONTEND_URL=http://localhost:5173
 
-export interface INote extends Document {
-    content: string
-    createdBy: Types.ObjectId
-    task: Types.ObjectId
-}
+SMTP_HOST=sandbox.smtp.mailtrap.io
+SMTP_PORT=xxxx
+SMTP_USER=xxxx
+SMTP_PASS=xxx
 
-const NoteSchema: Schema = new Schema({
-    content:{
-        type: String,
-        required: true
-    },
-    createdBy:{
-        type: Types.ObjectId,
-        ref: 'User',
-        required: true
-    },
-    task:{
-        type: Types.ObjectId,
-        ref: 'Task',
-        required:true
-    }
-
-},{timestamps: true})
-
-const Note = mongoose.model<INote>('Note', NoteSchema)
-export default Note
+JWT_SECRET=xxxx
 ```
