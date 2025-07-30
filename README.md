@@ -5,6 +5,8 @@ Node + TypeScript + Mongoose + Express
 Testing tests with Jest + Super Test
 API documented by Swagger
 ## Developer Notes
+### Mongo DB & Mongoose
+![Gameplay A](src/assets/shot1.png)
 ### Login system
 #### src/controllers/AuthController.ts
 ```
