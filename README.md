@@ -5,6 +5,9 @@ Node + TypeScript + Mongoose + Express
 Testing tests with Jest + Super Test
 API documented by Swagger
 ## Developer Notes
+## Deploy on Render
+Server hosted on render.com server
+https://server-uptask-node-typescript.onrender.com/
 ### Mongo DB & Mongoose
 ![Gameplay A](src/assets/shot1.png)
 ### Login system
